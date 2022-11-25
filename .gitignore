@@ -1,3 +1,7 @@
+# Cutom Excledes
+# Don't upload that data files. They are too big
+data/*
+
 # History files
 .Rhistory
 .Rapp.history
