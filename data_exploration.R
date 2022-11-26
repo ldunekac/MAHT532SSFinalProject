@@ -1,4 +1,5 @@
 
+library(fields)
 
 create.data.directory = function() {
   if (!dir.exists("data")) {
@@ -30,6 +31,39 @@ download.storm.event.data = function(meta.data) {
   }
 }
 
+
+fix.lon.lat.values = function(data) {
+  # First we fix the "off by ten error"
+  # There are many longitude values that are < -600
+  # After taking a look all of these values are off by a factor of ten
+  data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
+                                           function(x) ifelse(x < -200, x/10, x))
+  
+  #Some of the data is off by a factor of ten the other way
+  data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
+                                           function(x) ifelse(x > -10, x*10, x))
+  
+  # Now we need to fix the positive/negative issue. 
+  # Many points have positive longitude values when they should be negative
+  
+  data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
+                                           function(x) ifelse(x > 0, -x, x))
+  
+  # More off by 10 issues
+  data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
+                                           function(x) ifelse(x > -18, x*10, x))
+
+  
+  # Fix off by 10 error in latitude
+  data[c("BEGIN_LAT", "END_LAT")] = lapply(data[c("BEGIN_LAT", "END_LAT")], 
+                                           function(x) ifelse(abs(x) > 180, x/10, x))
+  
+  # WARNING: There is more data cleaning to do!
+  # Since we know the state of each event, I would like to plot by state
+  # And see if all points are in that state. Sanity check
+  return(data)
+}
+
 load.storm.data = function(meta.data) {
   file.prefix = meta.data$file.prefix
   file.posfix = meta.data$file.posfix
@@ -52,6 +86,21 @@ end.lat.lon.not.null = function(data) {
   data[!is.na(data$END_LAT),]
 }
 
+plot.by.category = function(category, data) {
+  if (!(category %in% unique(data$EVENT_TYPE))) {
+    print(paste0("Category: ", category, "is not a vaild event type")) 
+  } else {
+    plot(data$BEGIN_LON, 
+         data$BEGIN_LAT, 
+         main = paste0("Locations of ", category),
+         xlab = "Longitude",
+         ylab = "Latitude")
+    US(add=TRUE, col="Magenta")
+  }
+}
+
+
+
 #main = function() {  
 storm.event.meta.data = list(
   # Data format can be found here: 
@@ -67,13 +116,29 @@ download.storm.event.data(storm.event.meta.data)
 
 storm.data = load.storm.data(storm.event.meta.data)
 
+storm.data = fix.lon.lat.values(storm.data)
+
 cat("Number of total rows: ", nrow(storm.data), "\n")
 cat("Number of rows that have starting location: ", nrow(begin.lat.lon.not.null(storm.data)), "\n")
 cat("Number of rows that have an ending location: ", nrow(end.lat.lon.not.null(storm.data)), "\n")
 cat("Number of rows that have a start and ending location: ", nrow(begin.lat.lon.not.null(end.lat.lon.not.null(storm.data))), "\n")
 
 cat("Storm Categories: ", unique(storm.data$EVENT_TYPE), "\n")
+
+lat.data = begin.lat.lon.not.null(storm.data)
+plot.by.category("Tornado", lat.data)
+
 #} # end main
+
+
+
+
+
+
+
+
+
+
 
 
 
