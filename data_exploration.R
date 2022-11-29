@@ -61,6 +61,10 @@ fix.lon.lat.values = function(data) {
   # WARNING: There is more data cleaning to do!
   # Since we know the state of each event, I would like to plot by state
   # And see if all points are in that state. Sanity check
+  
+  data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
+                                           function(x) ifelse(x < -200, x/10, x))
+  
   return(data)
 }
 
@@ -90,8 +94,9 @@ plot.by.category = function(category, data) {
   if (!(category %in% unique(data$EVENT_TYPE))) {
     print(paste0("Category: ", category, "is not a vaild event type")) 
   } else {
-    plot(data$BEGIN_LON, 
-         data$BEGIN_LAT, 
+    category.data = data[data["EVENT_TYPE"] == category,]
+    plot(category.data$BEGIN_LON, 
+         category.data$BEGIN_LAT, 
          main = paste0("Locations of ", category),
          xlab = "Longitude",
          ylab = "Latitude")
