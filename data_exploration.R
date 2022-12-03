@@ -90,17 +90,30 @@ end.lat.lon.not.null = function(data) {
   data[!is.na(data$END_LAT),]
 }
 
-plot.by.category = function(category, data) {
-  if (!(category %in% unique(data$EVENT_TYPE))) {
-    print(paste0("Category: ", category, "is not a vaild event type")) 
+plot.by.category = function(category, data, state.to.color=NULL) {
+  if (is.null(category)) {
+    category.data = data
+    category = "All Events"
   } else {
+    if (!(category %in% unique(data$EVENT_TYPE))) {
+      print(paste0("Category: ", category, "is not a vaild event type")) 
+      return()
+    }
     category.data = data[data["EVENT_TYPE"] == category,]
-    plot(category.data$BEGIN_LON, 
-         category.data$BEGIN_LAT, 
-         main = paste0("Locations of ", category),
-         xlab = "Longitude",
-         ylab = "Latitude")
+  }
+  plot(category.data$BEGIN_LON, 
+       category.data$BEGIN_LAT, 
+       main = paste0("Locations of ", category),
+       xlab = "Longitude",
+       ylab = "Latitude")
     US(add=TRUE, col="Magenta")
+  if (!is.null(state.to.color)) {
+    state.data = category.data[category.data["STATE"] == state.to.color]
+    points(
+      state.data$BEGIN_LON,
+      state.data$BEGIN_LAT,
+      color="red"
+    )
   }
 }
 
@@ -131,7 +144,7 @@ cat("Number of rows that have a start and ending location: ", nrow(begin.lat.lon
 cat("Storm Categories: ", unique(storm.data$EVENT_TYPE), "\n")
 
 lat.data = begin.lat.lon.not.null(storm.data)
-plot.by.category("Tornado", lat.data)
+plot.by.category(NULL, lat.data)
 
 #} # end main
 
