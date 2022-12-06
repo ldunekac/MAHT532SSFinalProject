@@ -1,0 +1,71 @@
+---
+title: 'MATH 536: Spatial Statics Final Report'
+author: "Alex Gonzalez, Luke Dunekacke"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!-- HTML style comments.
+From the Report format in the ProjectGuidelines.pdf the report needs 5 sections
+1. Statement of the project topic and the primary question
+2. Data Description
+3. Statistical and graphical methods used
+4. Results and conclusions
+5 Possible directions or issues for future analysis.
+-->
+
+<!--
+Section 1: Statemet of the projet topic and the primary question.
+-->
+# Project Description
+
+What is our question?
+Who does it apply to
+What type data can answer this question
+What can we predict
+How can this be used
+
+<!--
+Section 2: Data Description
+Be sure to give enough of a reference where a reader/student in this class can access the data and reproduce your analysis.
+-->
+# Data Description
+
+What data are we working with
+Who owns/made the data
+Where can you find the data
+How does this data help answer our question
+Is there flaws in the data 
+Put in a references to the site, data location, etc.
+We might want to reference the github location here as well.
+
+<!-- 
+Statistical and graphical methods used
+-->
+
+# Statistical Analysis
+
+How is our spatial model setup
+Explain our methodology 
+Why predict a spatial poisson process
+Explain the algorithm.
+
+<!--
+Results and conclusion. 
+Make sure you give succinct conclusion that addresses your question. If you are doing a spatial analysis, make it useful to include the estimesr of regression parameters and the variance and range parameters in your results.
+-->
+
+# Results/Conclusion
+
+<!--
+Possible directions or issues for future analysis
+-->
+
+# Future Analysis
+
+
+

@@ -108,11 +108,11 @@ plot.by.category = function(category, data, state.to.color=NULL) {
        ylab = "Latitude")
     US(add=TRUE, col="Magenta")
   if (!is.null(state.to.color)) {
-    state.data = category.data[category.data["STATE"] == state.to.color]
+    state.data = category.data[category.data["STATE"] == state.to.color,]
     points(
       state.data$BEGIN_LON,
       state.data$BEGIN_LAT,
-      color="red"
+      col="red"
     )
   }
 }
@@ -144,7 +144,9 @@ cat("Number of rows that have a start and ending location: ", nrow(begin.lat.lon
 cat("Storm Categories: ", unique(storm.data$EVENT_TYPE), "\n")
 
 lat.data = begin.lat.lon.not.null(storm.data)
-plot.by.category(NULL, lat.data)
+plot.by.category(NULL, lat.data, "NEBRASKA")
+write.csv(lat.data, file="data/storm_data.csv")
+
 
 #} # end main
 

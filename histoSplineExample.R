@@ -11,7 +11,7 @@ set.seed( 223)
   delta<- brk[2]- brk[1]
   
 # in this example  s are histogram bin midpoints
-# and the response are the counts in each bin (OK if som e are zero)
+# and the response are the counts in each bin (OK if some are zero)
   s<- (brk[1:N] + brk[2:(N+1)])/2
 # counts in bins
   y <- hist(Y, breaks = brk, plot = FALSE)$counts
