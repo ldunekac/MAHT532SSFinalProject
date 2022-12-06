@@ -19,15 +19,22 @@ From the Report format in the ProjectGuidelines.pdf the report needs 5 sections
 -->
 
 <!--
-Section 1: Statemet of the projet topic and the primary question.
+Section 1: Statement of the project topic and the primary question.
 -->
 # Project Description
 
-What is our question?
-Who does it apply to
-What type data can answer this question
-What can we predict
-How can this be used
+This project will attempt to count the number of different types of disasters in an area.
+
+Natural disasters bring destruction to homes, crops and in some cases entire communities.
+
+Quantify this risk gives people and companies the tools to determine the impacts to these events.
+
+Knowing how often natural disasters occurs and to what degree gives a basis of the damage that these disasters can cause.
+
+Farmers may want to know how often it will hail, city planner may want to know how often it will flood, and insurance companies want to set the best rates possible while taking into account how much damage is likely to occur each year. 
+
+Each group, while having different concerns, are benefactors of this analysis.
+
 
 <!--
 Section 2: Data Description
