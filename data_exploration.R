@@ -184,23 +184,24 @@ cat("Storm Categories: ", unique(storm.data$EVENT_TYPE), "\n")
 lat.data = begin.lat.lon.not.null(storm.data)
 lat.data = make.year.column(lat.data)
 plot.by.category(NULL, lat.data, "NEBRASKA")
-write.csv(lat.data, file="data/storm_data.csv")
+#write.csv(lat.data, file="data/storm_data.csv")
 
 
-nb_ks_box = list(longitude = seq(-104.056, -94.596, length.out=40),
-                 latitude = seq(36.9799, 43.0000, length.out=40))
+nb_ks_box = list(longitude = seq(-104.056, -94.596, length.out=20),
+                 latitude = seq(36.9799, 43.0000, length.out=20))
 grid_nb_ks = make.surface.grid(nb_ks_box)
 #BR = -94.596, 36.9799
 #TL= -104.056 43.0000
 
 count.data = count.occurances.in.boxes(nb_ks_box, lat.data, "Tornado", year=2003)
 
+dev.new()
 bubblePlot(count.data$s[,1], count.data$s[,2], count.data$z)
 US(add=TRUE, col="magenta")  
 
 count.matrix = matrix(NA, nrow=nrow(count.data$z), ncol = length(1996:2013))
 
-idx = 0
+idx = 1
 for(year in 1996:2013) {
   print(year)
   count.matrix[,idx] = count.occurances.in.boxes(nb_ks_box, lat.data, "Tornado", year=year)$z
@@ -225,11 +226,10 @@ gOLD<-  predict(glmFit)
 # plot interates
 #plot( s, gOLD, type="l", col=1)
 coltab<-rainbow(6)
-for( I in 1:20){
+for(I in 1:4){
   print(I)
   fHat <- exp(gOLD)
-  dumb = c(y[1:length(y)-1] - fHat)/fHat
-  z <- dumb + gOLD 
+  z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD 
   weights<- c(fHat)
   TpsObj <-  suppressWarnings(
     spatialProcess(s[1:nrow(s)-1,], z, weights=weights, smoothness=.5)
@@ -241,6 +241,10 @@ for( I in 1:20){
   # add new estimate
   #lines( s, gNEW, col=coltab[I], lwd=2)
 }
+
+dev.new()
+bubblePlot(s[1:nrow(s)-1,1], s[1:nrow(s)-1,2], exp(gOLD))
+US(add=TRUE)
 
 ######
 # make grid
