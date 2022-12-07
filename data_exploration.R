@@ -121,29 +121,34 @@ plot.by.category = function(category, data, state.to.color=NULL) {
 count.occurances.in.boxes = function(lat.lon.grid, data, category, year = NULL) {
   filtered.data = data[data["EVENT_TYPE"] == category,]
   if(!is.null(year)) {
-    filtered.data = filtered.data[filtered.data["YEAR"] == year]
+    filtered.data = filtered.data[filtered.data["YEAR"] == year,]
   }
-  
+
   n_lon_count = length(lat.lon.grid$longitude)-1
   n_lat_count = length(lat.lon.grid$latitude)-1
   grid_counts = matrix(NA, nrow=n_lon_count, ncol=n_lat_count)
-  centers = matrix(NA, nrow=n_lon_count, ncol=n_lat_count)
+  counts = matrix(NA, nrow=n_lon_count * n_lat_count, ncol=1)
+  centers = matrix(NA, nrow=n_lon_count * n_lat_count, ncol=2)
+  
+  row_count = 0
   for(i in 1:n_lon_count) {
     for(j in 1:n_lat_count) {
       lon_min = lat.lon.grid$longitude[i]
       lon_max = lat.lon.grid$longitude[i+1]
-      lat_min = lat.lon.grid$latitude[i]
-      lat_mx = lat.lon.grid$latitude[i+1]
+      lat_min = lat.lon.grid$latitude[j]
+      lat_max = lat.lon.grid$latitude[j+1]
       
       grid_counts[i,j] = nrow(filtered.data[ (filtered.data["BEGIN_LAT"] >= lat_min) & 
                              (filtered.data["BEGIN_LAT"] <= lat_max) &
                              (filtered.data["BEGIN_LON"] >= lon_min) &
                              (filtered.data["BEGIN_LON"] <= lon_max),])
-      centers[i,j] = c((lon_max + lon_min)/2,
-                        (lat_max + lat_min)/2)
+      counts[row_count] = grid_counts[i,j]
+      centers[row_count,] = c((lon_max + lon_min)/2,
+                              (lat_max + lat_min)/2)
+      row_count = row_count + 1
     }
   }
-  return(list(grid_counts, centers))
+  return(list(grid_counts = grid_counts, s=centers, z=counts))
 }
 
 make.year.column = function(data) {
@@ -188,9 +193,55 @@ grid_nb_ks = make.surface.grid(nb_ks_box)
 #BR = -94.596, 36.9799
 #TL= -104.056 43.0000
 
-count.occurances.in.boxes(grid_nb_ks, lat.data, "Tornado")
-  
-  
+count.data = count.occurances.in.boxes(nb_ks_box, lat.data, "Tornado", year=2003)
+
+bubblePlot(count.data$s[,1], count.data$s[,2], count.data$z)
+US(add=TRUE, col="magenta")  
+
+count.matrix = matrix(NA, nrow=nrow(count.data$z), ncol = length(1996:2013))
+
+idx = 0
+for(year in 1996:2013) {
+  print(year)
+  count.matrix[,idx] = count.occurances.in.boxes(nb_ks_box, lat.data, "Tornado", year=year)$z
+  idx = idx + 1
+}
+
+count.average = as.matrix(rowMeans(count.matrix))
+##### AWWWWWWWWW ########  AAAAAAAAWWWWWWWWW #################
+##############################################################
+##############################################################
+
+
+
+# fit a GLM model to use for starting values
+y = count.average
+s = count.data$s
+glmFit<- glm(y ~ s, family = poisson())
+lambda<- .01
+# starting value (this does not need to be a GLM estimate but need to be positive)
+# poorer estimates may not give convergence. 
+gOLD<-  predict(glmFit)
+# plot interates
+#plot( s, gOLD, type="l", col=1)
+coltab<-rainbow(6)
+for( I in 1:20){
+  print(I)
+  fHat <- exp(gOLD)
+  dumb = c(y[1:length(y)-1] - fHat)/fHat
+  z <- dumb + gOLD 
+  weights<- c(fHat)
+  TpsObj <-  suppressWarnings(
+    spatialProcess(s[1:nrow(s)-1,], z, weights=weights, smoothness=.5)
+  )
+  gNEW<- c(predict( TpsObj))
+  testTol <- sqrt(mean((gNEW - gOLD)^2)/mean(gOLD^2))
+  cat( I, testTol, fill=TRUE)
+  gOLD<- gNEW
+  # add new estimate
+  #lines( s, gNEW, col=coltab[I], lwd=2)
+}
+
 ######
 # make grid
 # Count stuff in grid
