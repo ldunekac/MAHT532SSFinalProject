@@ -118,6 +118,39 @@ plot.by.category = function(category, data, state.to.color=NULL) {
 }
 
 
+count.occurances.in.boxes = function(lat.lon.grid, data, category, year = NULL) {
+  filtered.data = data[data["EVENT_TYPE"] == category,]
+  if(!is.null(year)) {
+    filtered.data = filtered.data[filtered.data["YEAR"] == year]
+  }
+  
+  n_lon_count = length(lat.lon.grid$longitude)-1
+  n_lat_count = length(lat.lon.grid$latitude)-1
+  grid_counts = matrix(NA, nrow=n_lon_count, ncol=n_lat_count)
+  centers = matrix(NA, nrow=n_lon_count, ncol=n_lat_count)
+  for(i in 1:n_lon_count) {
+    for(j in 1:n_lat_count) {
+      lon_min = lat.lon.grid$longitude[i]
+      lon_max = lat.lon.grid$longitude[i+1]
+      lat_min = lat.lon.grid$latitude[i]
+      lat_mx = lat.lon.grid$latitude[i+1]
+      
+      grid_counts[i,j] = nrow(filtered.data[ (filtered.data["BEGIN_LAT"] >= lat_min) & 
+                             (filtered.data["BEGIN_LAT"] <= lat_max) &
+                             (filtered.data["BEGIN_LON"] >= lon_min) &
+                             (filtered.data["BEGIN_LON"] <= lon_max),])
+      centers[i,j] = c((lon_max + lon_min)/2,
+                        (lat_max + lat_min)/2)
+    }
+  }
+  return(list(grid_counts, centers))
+}
+
+make.year.column = function(data) {
+  data$YEAR = lapply(data$BEGIN_YEAR, function(x) floor(x/100))
+  return(data)
+}
+
 
 #main = function() {  
 storm.event.meta.data = list(
@@ -144,9 +177,27 @@ cat("Number of rows that have a start and ending location: ", nrow(begin.lat.lon
 cat("Storm Categories: ", unique(storm.data$EVENT_TYPE), "\n")
 
 lat.data = begin.lat.lon.not.null(storm.data)
+lat.data = make.year.column(lat.data)
 plot.by.category(NULL, lat.data, "NEBRASKA")
 write.csv(lat.data, file="data/storm_data.csv")
 
+
+nb_ks_box = list(longitude = seq(-104.056, -94.596, length.out=40),
+                 latitude = seq(36.9799, 43.0000, length.out=40))
+grid_nb_ks = make.surface.grid(nb_ks_box)
+#BR = -94.596, 36.9799
+#TL= -104.056 43.0000
+
+count.occurances.in.boxes(grid_nb_ks, lat.data, "Tornado")
+  
+  
+######
+# make grid
+# Count stuff in grid
+# do weard regresson on the grid
+# plot sutff
+# look at residuals
+# Win
 
 #} # end main
 
