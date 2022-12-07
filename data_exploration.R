@@ -1,8 +1,6 @@
 
 library(fields)
 
-setwd("C:\\Users\\alexg\\OneDrive\\PhD\\Fall2023\\AMS532-Spatial_Statistics\\Final_Project\\MAHT532SSFinalProject")
-
 create.data.directory = function() {
   if (!dir.exists("data")) {
     dir.create("data")
@@ -168,7 +166,99 @@ make.year.column = function(data) {
   return(data)
 }
 
-############################################################################
+
+plot.count.data = function(s, z, category) {
+  dev.new()
+  quilt.plot(s, z,
+             main=paste0("Average Number of ", category, " Events per Year"),
+             xlab = "Longitude",
+             ylab = "Latitude",
+             cex=10,
+             size=10)
+  US(add=TRUE, col="magenta")
+}
+
+count.data.by.year = function(grid, data, event) {
+  count.data = count.occurances.in.boxes(grid, 
+                                         data, 
+                                         event, 
+                                         year=2003)
+  count.matrix = matrix(NA, 
+                        nrow=nrow(count.data$z), 
+                        ncol = length(1996:2013))
+  idx = 1
+  for(year in 1996:2013) {
+    print(year)
+    count.matrix[,idx] = count.occurances.in.boxes(grid, 
+                                                   data, 
+                                                   event, 
+                                                   year=year)$z
+    idx = idx + 1
+  }
+  count.average = as.matrix(rowMeans(count.matrix))
+  return(count.average)
+}
+
+
+model.surface = function(s, y) {
+  # fit a GLM model to use for starting values
+  glmFit<- glm(y ~ s, family = poisson())
+  lambda<- .01
+  # starting value (this does not need to be a GLM estimate but need to be positive)
+  # poorer estimates may not give convergence. 
+  gOLD<-  predict(glmFit)
+  # plot interates
+  #plot( s, gOLD, type="l", col=1)
+  coltab<-rainbow(6)
+  for(I in 1:4){
+    print(I)
+    fHat <- exp(gOLD)
+    z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD 
+    weights<- c(fHat)
+    TpsObj <-  suppressWarnings(
+      spatialProcess(s[1:nrow(s)-1,], z, 
+                     weights=weights, 
+                     smoothness=.5) # Exponential kernel
+    )
+    gNEW<- c(predict( TpsObj))
+    testTol <- sqrt(mean((gNEW - gOLD)^2)/mean(gOLD^2))
+    if(testTol <= 0.001) {
+      return(TpsObj)
+    }
+    cat( I, testTol, fill=TRUE)
+    gOLD<- gNEW
+  }
+  print("Model did not converge")
+  return(TpsObj)
+}
+
+generate_plots = function(data, event, grid) {
+  count.data = count.occurances.in.boxes(grid, 
+                                         data, 
+                                         event, 
+                                         year=2003)
+  print("Counting Occurances")
+  plot.count.data(count.data$s[1:nrow(count.data$s)-1,], 
+                  count.data$z[1:nrow(count.data$z)-1,], 
+                  event)
+  count.average = count.data.by.year(grid, data, event)
+  print("genreating model")
+  model = model.surface(count.data$s, count.average)
+  
+  dev.new()
+  bubblePlot(s[1:nrow(s)-1,1], s[1:nrow(s)-1,2], predict(model))
+  US(add=TRUE)
+  
+  ######
+  # Plot Residuals for one of the TORNADO // HAIL, etc. 
+  
+  dev.new()
+  surface(TpsObj)
+  US(add=TRUE)
+  
+  #fHatImage <- predictSurface(myfit, nx=60, ny=60)
+  #Image.plot(fHatImage)
+}
 
 #main = function() {  
 storm.event.meta.data = list(
@@ -203,93 +293,15 @@ lat.data = make.year.column(lat.data)
 plot.by.category(NULL, lat.data, "NEBRASKA")
 #write.csv(lat.data, file="data/storm_data.csv")
 
-nb_ks_box = list(longitude = seq(-104.056, -94.596, 
+# Longitude and latitude of Kansas and Oklahoma
+ks_oh_grid = list(longitude = seq(-103, -94.0, 
                                  length.out=20),
-                 latitude = seq(36.9799, 43.0000, 
+                 latitude = seq(33.0, 40.00,
                                 length.out=20))
 
-grid_nb_ks = make.surface.grid(nb_ks_box)
-#BR = -94.596, 36.9799
-#TL= -104.056 43.0000
 
-count.data = count.occurances.in.boxes(nb_ks_box, 
-                                       lat.data, 
-                                       "Tornado", 
-                                       year=2003)
-
-dev.new()
-bubblePlot(count.data$s[,1], count.data$s[,2], count.data$z)
-US(add=TRUE, col="magenta")  
-
-count.matrix = matrix(NA, 
-                      nrow=nrow(count.data$z), 
-                      ncol = length(1996:2013))
-
-idx = 1
-for(year in 1996:2013) {
-  print(year)
-  count.matrix[,idx] = count.occurances.in.boxes(nb_ks_box, 
-                                                 lat.data, 
-                                                 "Tornado", 
-                                                 year=year)$z
-  idx = idx + 1
-}
-
-count.average = as.matrix(rowMeans(count.matrix))
-##### AWWWWWWWWW ########  AAAAAAAAWWWWWWWWW #################
-##############################################################
-##############################################################
-
-
-
-# fit a GLM model to use for starting values
-y = count.average
-s = count.data$s
-glmFit<- glm(y ~ s, family = poisson())
-lambda<- .01
-# starting value (this does not need to be a GLM estimate but need to be positive)
-# poorer estimates may not give convergence. 
-gOLD<-  predict(glmFit)
-# plot interates
-#plot( s, gOLD, type="l", col=1)
-coltab<-rainbow(6)
-for(I in 1:4){
-  print(I)
-  fHat <- exp(gOLD)
-  z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD 
-  weights<- c(fHat)
-  TpsObj <-  suppressWarnings(
-    spatialProcess(s[1:nrow(s)-1,], z, 
-                   weights=weights, 
-                   smoothness=.5) # Exponential kernel
-  )
-  gNEW<- c(predict( TpsObj))
-  testTol <- sqrt(mean((gNEW - gOLD)^2)/mean(gOLD^2))
-  cat( I, testTol, fill=TRUE)
-  gOLD<- gNEW
-  # add new estimate
-  #lines( s, gNEW, col=coltab[I], lwd=2)
-}
-
-dev.new()
-bubblePlot(s[1:nrow(s)-1,1], s[1:nrow(s)-1,2], exp(gOLD))
-US(add=TRUE)
-
-######
-
-# Plot Residuals for one of the TORNADO // HAIL, etc. 
-
-# 
-
-
-#} # end main
-
-
-surface(TpsObj)
-US(add=TRUE)
-
-fHatImage <- predictSurface(myfit, nx=60, ny=60)
-Image.plot(fHatImage)
+generate_plots(lat.data, "Hail", ks_oh_grid)
+generate_plots(lat.data, "Tornado", ks_oh_grid)
 
 
 
