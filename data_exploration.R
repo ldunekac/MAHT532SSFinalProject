@@ -232,6 +232,17 @@ model.surface = function(s, y) {
   return(TpsObj)
 }
 
+
+plot.model.surface = function(model) {
+  dev.new()
+  surface(model)
+  US(add=TRUE)
+}
+
+plot.model.SE = function(model) {
+  
+}
+
 generate_plots = function(data, event, grid) {
   count.data = count.occurances.in.boxes(grid, 
                                          data, 
@@ -245,19 +256,10 @@ generate_plots = function(data, event, grid) {
   print("genreating model")
   model = model.surface(count.data$s, count.average)
   
-  dev.new()
-  bubblePlot(s[1:nrow(s)-1,1], s[1:nrow(s)-1,2], predict(model))
-  US(add=TRUE)
-  
-  ######
-  # Plot Residuals for one of the TORNADO // HAIL, etc. 
-  
-  dev.new()
-  surface(TpsObj)
-  US(add=TRUE)
-  
-  #fHatImage <- predictSurface(myfit, nx=60, ny=60)
-  #Image.plot(fHatImage)
+  print("Plotting Surface")
+  plot.model.surface(model)
+  print("Plotting SE")
+  plot.model.SE(model)
 }
 
 #main = function() {  
