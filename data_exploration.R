@@ -5,6 +5,9 @@ create.data.directory = function() {
   if (!dir.exists("data")) {
     dir.create("data")
   }
+  if (!dir.exists("plots")) {
+    dir.create("plots")
+  }
 }
 
 download.storm.event.data = function(meta.data) {
@@ -168,6 +171,15 @@ make.year.column = function(data) {
 
 
 plot.count.data = function(s, z, category) {
+  png(paste0("plots/count_", category,".png"))
+  quilt.plot(s, z,
+             main=paste0("Average Number of ", category, " Events per Year"),
+             xlab = "Longitude",
+             ylab = "Latitude",
+             cex=10,
+             size=10)
+  US(add=TRUE, col="magenta")
+  dev.off()
   dev.new()
   quilt.plot(s, z,
              main=paste0("Average Number of ", category, " Events per Year"),
@@ -210,7 +222,7 @@ model.surface = function(s, y) {
   # plot interates
   #plot( s, gOLD, type="l", col=1)
   coltab<-rainbow(6)
-  for(I in 1:4){
+  for(I in 1:10){
     print(I)
     fHat <- exp(gOLD)
     z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD 
@@ -233,14 +245,78 @@ model.surface = function(s, y) {
 }
 
 
-plot.model.surface = function(model) {
+plot.model.surface = function(model, category) {
+  png(paste0("plots/surface_", category,".png"))
+  surface(model,
+          main=paste0("Surface of Lambda  for ", category),
+          xlab="Longitude",
+          ylab="Latitude")
+  US(add=TRUE)
+  dev.off()
   dev.new()
-  surface(model)
+  surface(model,
+          main=paste0("Surface of Lambda  for ", category),
+          xlab="Longitude",
+          ylab="Latitude")
   US(add=TRUE)
 }
 
-plot.model.SE = function(model) {
+plot.model.surface.exp = function(model, category, grid) {
   
+  predict_grid = list(longitude = seq(grid$longitude[1],
+                                      grid$longitude[length(grid$longitude)], 
+                                      length.out=1000),
+                      latitude = seq(grid$latitude[1],
+                                     grid$latitude[length(grid$latitude)],
+                                  length.out=1000))
+  
+  pred.surface.grid = make.surface.grid(predict_grid)
+  pred.surface = predict(model, pred.surface.grid)
+  pred.surface.exp = exp(pred.surface)
+  
+  png(paste0("plots/quilt_surface_", category,".png"))
+  quilt.plot(pred.surface.grid, pred.surface,
+          main=paste0("Surface of Lambda Values for ", category),
+          xlab="Longitude",
+          ylab="Latitude")
+  US(add=TRUE)
+  dev.off()
+  dev.new()
+  quilt.plot(pred.surface.grid, pred.surface,
+             main=paste0("Surface of Lambda Values for ", category),
+             xlab="Longitude",
+             ylab="Latitude")
+  US(add=TRUE)
+}
+
+
+
+plot.model.SE = function(model, category, grid) {
+  predict_grid = list(longitude = seq(grid$longitude[1],
+                                      grid$longitude[length(grid$longitude)], 
+                                      length.out=500),
+                      latitude = seq(grid$latitude[1],
+                                     grid$latitude[length(grid$latitude)],
+                                     length.out=500))
+  
+  pred.surface.grid = make.surface.grid(predict_grid)
+  dev.new()
+  pred.surface = predictSE(model, pred.surface.grid)
+  pred.surface.exp = exp(pred.surface)
+  
+  png(paste0("plots/quilt_surfaceSE_", category,".png"))
+  quilt.plot(pred.surface.grid, pred.surface,
+             main=paste0("Surface of Lambda SE for ", category),
+             xlab="Longitude",
+             ylab="Latitude")
+  US(add=TRUE)
+  dev.off()
+  dev.new()
+  quilt.plot(pred.surface.grid, pred.surface,
+             main=paste0("Surface of Lambda SE for ", category),
+             xlab="Longitude",
+             ylab="Latitude")
+  US(add=TRUE)
 }
 
 generate_plots = function(data, event, grid) {
@@ -257,9 +333,10 @@ generate_plots = function(data, event, grid) {
   model = model.surface(count.data$s, count.average)
   
   print("Plotting Surface")
-  plot.model.surface(model)
+  plot.model.surface.exp(model, event, grid)
+  plot.model.surface(model, event)
   print("Plotting SE")
-  plot.model.SE(model)
+  plot.model.SE(model, event, grid)
 }
 
 #main = function() {  
