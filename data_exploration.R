@@ -177,7 +177,7 @@ make.year.column = function(data) {
   return(data)
 }
 
-## TODO: @@@@@@@@@@@@@@ CHANGE MAIN ARGUMENT FROM AVERAGE TO TOTAL @@@@@@@@@@@@
+
 plot.count.data = function(s, z, category) {
   png(paste0("plots/count_", category,".png"))
   quilt.plot(s, z, 
@@ -342,14 +342,15 @@ plot.model.SE = function(model, category, grid) {
 
 
 generate_plots = function(data, event, grid) {
+  print("Counting Occurences")
   count.data = count.occurances.in.boxes(grid, 
                                          data, 
-                                         event, 
-                                         year=2003)
-  print("Counting Occurences")
+                                         event)
+  count.data$z = count.data$z/18 # Number of years
   plot.count.data(count.data$s[1:nrow(count.data$s)-1,], 
                   count.data$z[1:nrow(count.data$z)-1,], 
                   event)
+  print("Finding average again (hack)")
   count.average = count.data.by.year(grid, data, event)
   
   print("Generating Model")
