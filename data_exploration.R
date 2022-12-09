@@ -1,5 +1,9 @@
+################################################################################
+##########################  FUNCTION DEFINITIONS  ##############################
+################################################################################
 
 library(fields)
+
 
 create.data.directory = function() {
   if (!dir.exists("data")) {
@@ -10,8 +14,8 @@ create.data.directory = function() {
   }
 }
 
-download.storm.event.data = function(meta.data) {
 
+download.storm.event.data = function(meta.data) {
   data.source = meta.data$source
   date.range = meta.data$date.range
   file.prefix = meta.data$file.prefix
@@ -64,12 +68,9 @@ fix.lon.lat.values = function(data) {
 
   data[c("BEGIN_LON", "END_LON")] = lapply(data[c("BEGIN_LON", "END_LON")], 
                                            function(x) ifelse(x < -200, x/10, x))
-  
   return(data)
 }
 
-
-###############################################################################
 
 # More rows per year. Same columns
 load.storm.data = function(meta.data) {
@@ -86,13 +87,18 @@ load.storm.data = function(meta.data) {
   all.data
 }
 
+
+# remove all storm events without recorded latitude
 begin.lat.lon.not.null = function(data) {
   data[!is.na(data$BEGIN_LAT),]
 } 
 
+
+# remove all storm events without recorded longitude
 end.lat.lon.not.null = function(data) {
   data[!is.na(data$END_LAT),]
 }
+
 
 plot.by.category = function(category, data, state.to.color=NULL) {
   if (is.null(category)) {
@@ -152,7 +158,7 @@ count.occurances.in.boxes = function(lat.lon.grid, data, category, year = NULL) 
                              (filtered.data["BEGIN_LAT"] <= lat_max) &
                              (filtered.data["BEGIN_LON"] >= lon_min) &
                              (filtered.data["BEGIN_LON"] <= lon_max),])
-      
+      # record events at center of grid boxes.
       counts[row_count] = grid_counts[i,j]
       centers[row_count,] = c((lon_max + lon_min)/2,
                               (lat_max + lat_min)/2)
@@ -164,15 +170,17 @@ count.occurances.in.boxes = function(lat.lon.grid, data, category, year = NULL) 
               z=counts))
 }
 
+
+# change YYYYMM date format into YYYY. 
 make.year.column = function(data) {
   data$YEAR = lapply(data$BEGIN_YEAR, function(x) floor(x/100))
   return(data)
 }
 
-
+## TODO: @@@@@@@@@@@@@@ CHANGE MAIN ARGUMENT FROM AVERAGE TO TOTAL @@@@@@@@@@@@
 plot.count.data = function(s, z, category) {
   png(paste0("plots/count_", category,".png"))
-  quilt.plot(s, z,
+  quilt.plot(s, z, 
              main=paste0("Average Number of ", category, " Events per Year"),
              xlab = "Longitude",
              ylab = "Latitude",
@@ -189,6 +197,7 @@ plot.count.data = function(s, z, category) {
              size=10)
   US(add=TRUE, col="magenta")
 }
+
 
 count.data.by.year = function(grid, data, event) {
   count.data = count.occurances.in.boxes(grid, 
@@ -213,35 +222,40 @@ count.data.by.year = function(grid, data, event) {
 
 
 model.surface = function(s, y) {
-  # fit a GLM model to use for starting values
+  # Fit a GLM model to use for starting values
   glmFit<- glm(y ~ s, family = poisson())
+  # Provide starting lambda value 
+  # Note: this does not need to be a GLM estimate, but needs to be positive.
   lambda<- .01
-  # starting value (this does not need to be a GLM estimate but need to be positive)
-  # poorer estimates may not give convergence. 
-  gOLD<-  predict(glmFit)
-  # plot interates
-  #plot( s, gOLD, type="l", col=1)
-  coltab<-rainbow(6)
+  # Poorer estimates may not give convergence. 
+  gOLD<-  predict(glmFit) # predicted lambda values for all spatial locations, s
+  
+  # Uncomment to view iterative plot convergence
+  # plot( s, gOLD, type="l", col=1)
+  
+  coltab<-rainbow(6) # I see what you did there. 
   for(I in 1:10){
+    paste0("Lambda iteration: ", I)
     print(I)
-    fHat <- exp(gOLD)
-    z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD 
-    weights<- c(fHat)
-    TpsObj <-  suppressWarnings(
-      spatialProcess(s[1:nrow(s)-1,], z, 
+    fHat <- exp(gOLD) # Transform from logit space to lambdas
+    z <- c(y[1:length(y)-1] - fHat)/fHat + gOLD # obtain difference surface
+    weights<- c(fHat) # use previous GLS weights, but adjust kriging parameters
+    temp.spatial <-  suppressWarnings( 
+      spatialProcess(s[1:nrow(s)-1,], 
+                     z, # fit to difference surface
                      weights=weights, 
                      smoothness=.5) # Exponential kernel
     )
-    gNEW<- c(predict( TpsObj))
-    testTol <- sqrt(mean((gNEW - gOLD)^2)/mean(gOLD^2))
+    gNEW<- c(predict( temp.spatial)) # obtain new grid estimates
+    testTol <- sqrt(mean((gNEW - gOLD)^2)/mean(gOLD^2)) # check if change is low
     if(testTol <= 0.001) {
-      return(TpsObj)
+      return(temp.spatial) # return converged spatial model
     }
     cat( I, testTol, fill=TRUE)
-    gOLD<- gNEW
+    gOLD<- gNEW 
   }
   print("Model did not converge")
-  return(TpsObj)
+  return(temp.spatial) # or warn and return model after 10 iterations
 }
 
 
@@ -261,6 +275,7 @@ plot.model.surface = function(model, category) {
   US(add=TRUE)
 }
 
+# Helper function for plotting the lambda values 
 plot.model.surface.exp = function(model, category, grid) {
   
   predict_grid = list(longitude = seq(grid$longitude[1],
@@ -275,22 +290,26 @@ plot.model.surface.exp = function(model, category, grid) {
   pred.surface.exp = exp(pred.surface)
   
   png(paste0("plots/quilt_surface_", category,".png"))
-  quilt.plot(pred.surface.grid, pred.surface,
-          main=paste0("Surface of Lambda Values for ", category),
-          xlab="Longitude",
-          ylab="Latitude")
-  US(add=TRUE)
-  dev.off()
-  dev.new()
-  quilt.plot(pred.surface.grid, pred.surface,
+  quilt.plot(pred.surface.grid, 
+             pred.surface,
              main=paste0("Surface of Lambda Values for ", category),
              xlab="Longitude",
              ylab="Latitude")
+  
+  US(add=TRUE)
+  dev.off()
+  dev.new()
+  quilt.plot(pred.surface.grid, 
+             pred.surface,
+             main=paste0("Surface of Lambda Values for ", category),
+             xlab="Longitude",
+             ylab="Latitude")
+  
   US(add=TRUE)
 }
 
 
-
+# Helper function for plotting the standard error graphs
 plot.model.SE = function(model, category, grid) {
   predict_grid = list(longitude = seq(grid$longitude[1],
                                       grid$longitude[length(grid$longitude)], 
@@ -305,44 +324,53 @@ plot.model.SE = function(model, category, grid) {
   pred.surface.exp = exp(pred.surface)
   
   png(paste0("plots/quilt_surfaceSE_", category,".png"))
-  quilt.plot(pred.surface.grid, pred.surface,
+  quilt.plot(pred.surface.grid, 
+             pred.surface,
              main=paste0("Surface of Lambda SE for ", category),
              xlab="Longitude",
              ylab="Latitude")
   US(add=TRUE)
   dev.off()
   dev.new()
-  quilt.plot(pred.surface.grid, pred.surface,
+  quilt.plot(pred.surface.grid, 
+             pred.surface,
              main=paste0("Surface of Lambda SE for ", category),
              xlab="Longitude",
              ylab="Latitude")
   US(add=TRUE)
 }
 
+
 generate_plots = function(data, event, grid) {
   count.data = count.occurances.in.boxes(grid, 
                                          data, 
                                          event, 
                                          year=2003)
-  print("Counting Occurances")
+  print("Counting Occurences")
   plot.count.data(count.data$s[1:nrow(count.data$s)-1,], 
                   count.data$z[1:nrow(count.data$z)-1,], 
                   event)
   count.average = count.data.by.year(grid, data, event)
-  print("genreating model")
+  
+  print("Generating Model")
   model = model.surface(count.data$s, count.average)
   
   print("Plotting Surface")
   plot.model.surface.exp(model, event, grid)
   plot.model.surface(model, event)
+  
   print("Plotting SE")
   plot.model.SE(model, event, grid)
 }
 
+################################################################################
+################################    MAIN    ####################################
+################################################################################
+
 #main = function() {  
 storm.event.meta.data = list(
-  # Data format can be found here: 
-  # https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/Storm-Data-Bulk-csv-Format.pdf
+# Data format can be found here: 
+# https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/Storm-Data-Bulk-csv-Format.pdf
   source = "https://www.ncei.noaa.gov/pub/data/swdi/stormevents/csvfiles/legacy/",
   date.range = 1996:2013,
   file.prefix = "Stormdata_",
@@ -369,24 +397,20 @@ cat("Storm Categories: ",
 
 lat.data = begin.lat.lon.not.null(storm.data)
 lat.data = make.year.column(lat.data)
+
+# Sanity check of data on Nebraska
 plot.by.category(NULL, lat.data, "NEBRASKA")
+
 #write.csv(lat.data, file="data/storm_data.csv")
 
 # Longitude and latitude of Kansas and Oklahoma
 ks_oh_grid = list(longitude = seq(-103, -94.0, 
                                  length.out=20),
-                 latitude = seq(33.0, 40.00,
-                                length.out=20))
-
+                  latitude = seq(33.0, 40.00,
+                                 length.out=20))
 
 generate_plots(lat.data, "Hail", ks_oh_grid)
 generate_plots(lat.data, "Tornado", ks_oh_grid)
 
-
-
-
-
-
-
-
+#} # End main
 
