@@ -262,14 +262,14 @@ model.surface = function(s, y) {
 plot.model.surface = function(model, category) {
   png(paste0("plots/surface_", category,".png"))
   surface(model,
-          main=paste0("Surface of Lambda  for ", category),
+          main=paste0("Surface of Log(Lambda)  for ", category),
           xlab="Longitude",
           ylab="Latitude")
   US(add=TRUE)
   dev.off()
   dev.new()
   surface(model,
-          main=paste0("Surface of Lambda  for ", category),
+          main=paste0("Surface of Log(Lambda)  for ", category),
           xlab="Longitude",
           ylab="Latitude")
   US(add=TRUE)
@@ -291,7 +291,7 @@ plot.model.surface.exp = function(model, category, grid) {
   
   png(paste0("plots/quilt_surface_", category,".png"))
   quilt.plot(pred.surface.grid, 
-             pred.surface,
+             pred.surface.exp,
              main=paste0("Surface of Lambda Values for ", category),
              xlab="Longitude",
              ylab="Latitude")
@@ -300,7 +300,7 @@ plot.model.surface.exp = function(model, category, grid) {
   dev.off()
   dev.new()
   quilt.plot(pred.surface.grid, 
-             pred.surface,
+             pred.surface.exp,
              main=paste0("Surface of Lambda Values for ", category),
              xlab="Longitude",
              ylab="Latitude")
